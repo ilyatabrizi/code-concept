@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Code Concept Community</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script>
+  // GitHub Pages serves this for unknown paths. Bounce back into the hash router,
+  // keeping whatever path was asked for as the route.
+  var base = location.pathname.replace(/\/[^\/]*$/, '/');
+  location.replace(base + '#/');
+</script>
+</head><body style="background:#000"></body></html>
