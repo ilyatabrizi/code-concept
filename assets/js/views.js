@@ -225,10 +225,17 @@
           '</div>' +
         '</div>' +
         '<div class="rule mt-l" style="opacity:.14"></div>' +
-        '<div class="between mt-m" style="flex-wrap:wrap;gap:12px">' +
-          '<span class="foot__legal">© ' + new Date().getFullYear() + ' ' + B.full + ' · ' + B.tagline + '</span>' +
-          '<span class="foot__legal"><a href="#/crm" class="u">Staff</a> · Designed and established by ' +
-            '<span class="alpha">Alpha Agency</span></span>' +
+        '<div class="foot__base mt-m">' +
+          '<span class="foot__legal">© ' + new Date().getFullYear() + ' ' + B.full + '</span>' +
+          '<span class="foot__legal foot__by">' +
+            '<a href="#/crm" class="u">Staff</a>' +
+            '<i class="foot__dot" aria-hidden="true"></i>' +
+            'Designed and established by ' +
+            '<a class="alpha" href="https://alphaa.agency" target="_blank" rel="noopener">' +
+              '<img src="assets/img/alpha-mark.png" alt="" width="47" height="45" decoding="async">' +
+              '<span>Alpha Agency</span>' +
+            '</a>' +
+          '</span>' +
         '</div>' +
       '</div>' +
     '</footer>';

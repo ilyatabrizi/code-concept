@@ -348,7 +348,9 @@ body.tabs-hidden .tabbar {
    lives. Sidesteps the aspect mismatch between a square-ish photo and a tall
    phone, and matches the black posters on the café's own walls. */
 .hero {
-  position: relative; min-height: 100svh;
+  /* vh first as the floor: if an engine cannot resolve svh the declaration is
+     dropped and the hero would collapse to content height. */
+  position: relative; min-height: 100vh; min-height: 100svh;
   display: flex; flex-direction: column; justify-content: flex-end;
   padding-top: 90px;
   padding-bottom: calc(var(--tabh) + env(safe-area-inset-bottom, 0px) + 34px);
@@ -449,6 +451,10 @@ a:hover > .frame img, .frame:hover img { transform: scale(1.045); }
 .rv-d3 { transition-delay: .24s; } .rv-d4 { transition-delay: .32s; }
 
 /* ---- views ---------------------------------------------------------------- */
+/* The router paints into #app. Hold a full screen before it does, so the first
+   frame is a clean black field rather than a short page with the sections below
+   riding up into view. */
+#app { min-height: 100vh; min-height: 100svh; }
 .view { animation: viewIn .5s var(--ease); }
 @keyframes viewIn { from { opacity: 0; transform: translateY(10px); } }
 .pagehead { padding-top: calc(env(safe-area-inset-top, 0px) + 92px); }
@@ -841,7 +847,7 @@ textarea.input { resize: vertical; min-height: 84px; line-height: 1.5; }
 @keyframes growcol { from { height: 0 !important; } }
 
 /* ---- CRM ------------------------------------------------------------------ */
-.crm { background: var(--ink-1); min-height: 100svh; }
+.crm { background: var(--ink-1); min-height: 100vh; min-height: 100svh; }
 .crm .card { border-color: rgba(255,255,255,.11); background: rgba(255,255,255,.025); }
 .crm-table-wrap { overflow-x: auto; margin-inline: calc(var(--gut) * -1); padding-inline: var(--gut); }
 table.crm-table { min-width: 720px; font-size: .86rem; }
@@ -914,11 +920,27 @@ table.crm-table .num { font-variant-numeric: tabular-nums; }
 .foot a.u { border-bottom: 1px solid color-mix(in srgb, currentColor 30%, transparent); padding-bottom: 1px; transition: border-color .25s; }
 .foot a.u:hover { border-bottom-color: currentColor; }
 .foot__legal { font-size: .7rem; color: var(--grey-2); letter-spacing: .02em; }
-.alpha {
-  color: #ffcc00;
-  font-weight: 800;
-  letter-spacing: .01em;
+/* Agency credit — reads as one quiet line, not a shout. Same size and weight as
+   the legal text beside it; the mark carries the colour. */
+.foot__base {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px 22px;
 }
+.foot__by { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.foot__dot {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: currentColor; opacity: .45; flex: 0 0 auto;
+}
+.alpha {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: #ffcc00;
+  font-weight: inherit;
+  transition: opacity .25s var(--ease);
+}
+.alpha img { height: 1.15em; width: auto; flex: 0 0 auto; }
+.alpha span { border-bottom: 1px solid transparent; transition: border-color .25s; }
+.alpha:hover { opacity: .85; }
+.alpha:hover span { border-bottom-color: currentColor; }
 
 /* ---- install prompt ------------------------------------------------------- */
 .a2hs {
