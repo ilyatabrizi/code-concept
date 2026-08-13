@@ -13,7 +13,6 @@
     address: 'Tabriz · East Azerbaijan',
     phone: '0914 630 6050',
     phoneTel: '+989146306050',
-    email: 'ali_karimiazar@yahoo.com',
     instagram: 'https://instagram.com/codeconceptcommunity',
     currency: 't',                       // thousand Toman, as printed on the card
     hours: [

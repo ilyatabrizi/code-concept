@@ -21,19 +21,22 @@
       '<span class="idx">' + (extra || idx) + '</span></div>';
   }
 
-  function itemRow(it, opts) {
-    opts = opts || {};
-    return '<li class="mitem" data-item="' + it.id + '" data-search="' +
+  function itemRow(it) {
+    var off = S.isSoldOut(it.id);
+    return '<li class="mitem' + (off ? ' is-off' : '') + '" data-item="' + it.id + '" data-search="' +
         UI.esc((it.en + ' ' + it.fa).toLowerCase()) + '">' +
       '<div class="mitem__t">' +
         '<div class="mitem__en">' + UI.esc(it.en) +
-          '<span class="pts">' + it.pts + ' PTS</span>' +
+          (off ? '<span class="pts pts--off">Sold out</span>'
+               : '<span class="pts">' + it.pts + ' PTS</span>') +
         '</div>' +
         '<div class="mitem__fa">' + UI.esc(it.fa) + '</div>' +
       '</div>' +
       '<div class="mitem__p mono-num">' + UI.price(it.price) + '</div>' +
-      '<button class="add" data-add="' + it.id + '" type="button" ' +
-        'aria-label="Add ' + UI.esc(it.en) + ' to bag">' + UI.icon('plus', 15) + '</button>' +
+      (off
+        ? '<span class="add add--off" aria-hidden="true">' + UI.icon('x', 14) + '</span>'
+        : '<button class="add" data-add="' + it.id + '" type="button" ' +
+            'aria-label="Add ' + UI.esc(it.en) + ' to bag">' + UI.icon('plus', 15) + '</button>') +
     '</li>';
   }
 
@@ -80,14 +83,12 @@
         '<div class="hero__meta">' +
           '<span class="eyebrow">' + B.city + '</span>' +
           '<span class="eyebrow">Specialty coffee</span>' +
-          '<span class="eyebrow">Open today · 08:00</span>' +
         '</div>' +
         '<div class="hero__cta">' +
-          '<a class="btn" href="#/menu">Order &amp; earn points ' + UI.icon('arrow', 16) + '</a>' +
+          '<a class="btn" href="#/menu">Order and earn points ' + UI.icon('arrow', 16) + '</a>' +
           '<a class="btn btn--ghost" href="#/profile">Join the community</a>' +
         '</div>' +
       '</div>' +
-      '<div class="scrollcue">Scroll</div>' +
     '</section>' +
 
     '<div data-tone="dark"><div class="marquee"><div class="marquee__track">' +
@@ -219,7 +220,6 @@
             '<div class="eyebrow">Talk to us</div>' +
             '<p class="small mt-s">' +
               '<a class="u" href="tel:' + B.phoneTel + '" dir="ltr">' + B.phone + '</a><br>' +
-              '<a class="u" href="mailto:' + B.email + '">' + B.email + '</a><br>' +
               '<a class="u" href="' + B.instagram + '" target="_blank" rel="noopener">@' + B.handle + '</a>' +
             '</p>' +
           '</div>' +
@@ -227,7 +227,8 @@
         '<div class="rule mt-l" style="opacity:.14"></div>' +
         '<div class="between mt-m" style="flex-wrap:wrap;gap:12px">' +
           '<span class="foot__legal">© ' + new Date().getFullYear() + ' ' + B.full + ' · ' + B.tagline + '</span>' +
-          '<span class="foot__legal"><a href="#/crm" class="u">Staff</a> · Preview build by Alpha Agency</span>' +
+          '<span class="foot__legal"><a href="#/crm" class="u">Staff</a> · Designed and established by ' +
+            '<span class="alpha">Alpha Agency</span></span>' +
         '</div>' +
       '</div>' +
     '</footer>';
@@ -240,6 +241,8 @@
     var html =
     '<div data-tone="dark">' +
       '<div class="wrap">' +
+        // clears the fixed top bar, so the chips start below it rather than under it
+        '<div class="catbar-spacer" aria-hidden="true"></div>' +
         '<div class="catbar" role="group" aria-label="Filter the menu by section">' +
           '<button class="chip is-on" data-cat="all" type="button" aria-pressed="true"><span>All</span></button>' +
           CC.MENU.map(function (s) {
@@ -336,10 +339,15 @@
   // ===========================================================================
   V.order = function () {
     var bag = S.bag(), me = S.me();
-    var lines = bag.map(function (l) { return { it: CC.ITEMS[l.id], qty: l.qty }; })
+    // a drink can be 86'd by the bar after it was already bagged, so availability
+    // is re-checked here and sold-out lines are excluded from the totals
+    var lines = bag.map(function (l) {
+                     return { it: CC.ITEMS[l.id], qty: l.qty, off: S.isSoldOut(l.id) };
+                   })
                    .filter(function (l) { return l.it; });
-    var total = lines.reduce(function (a, l) { return a + l.it.price * l.qty; }, 0);
-    var points = lines.reduce(function (a, l) { return a + l.it.pts * l.qty; }, 0);
+    var ok = lines.filter(function (l) { return !l.off; });
+    var total = ok.reduce(function (a, l) { return a + l.it.price * l.qty; }, 0);
+    var points = ok.reduce(function (a, l) { return a + l.it.pts * l.qty; }, 0);
     var live = me ? S.ordersOf(me.id).filter(function (o) { return o.status !== 'collected'; }) : [];
 
     var html = '<div data-tone="dark"><div class="wrap pagehead">' +
@@ -362,18 +370,24 @@
         '<a class="btn btn--ghost" href="#/menu">Browse the menu</a></div>';
     } else {
       html += '<ul class="mt-m">' + lines.map(function (l) {
-        return '<li class="mitem" style="grid-template-columns:1fr auto auto">' +
+        return '<li class="mitem' + (l.off ? ' is-off' : '') + '" style="grid-template-columns:1fr auto auto">' +
           '<div class="mitem__t"><div class="mitem__en">' + UI.esc(l.it.en) +
-            '<span class="pts">' + (l.it.pts * l.qty) + ' PTS</span></div>' +
+            (l.off ? '<span class="pts pts--off">Sold out</span>'
+                   : '<span class="pts">' + (l.it.pts * l.qty) + ' PTS</span>') + '</div>' +
             '<div class="mitem__fa">' + UI.esc(l.it.fa) + '</div></div>' +
           '<div class="qty" data-q="' + l.it.id + '">' +
             '<button type="button" data-dec="' + l.it.id + '" aria-label="One fewer ' + UI.esc(l.it.en) + '">' + UI.icon('minus', 12) + '</button>' +
             '<output>' + l.qty + '</output>' +
-            '<button type="button" data-inc="' + l.it.id + '" aria-label="One more ' + UI.esc(l.it.en) + '">' + UI.icon('plus', 12) + '</button>' +
+            (l.off
+              ? '<button type="button" disabled aria-label="' + UI.esc(l.it.en) + ' is sold out">' + UI.icon('plus', 12) + '</button>'
+              : '<button type="button" data-inc="' + l.it.id + '" aria-label="One more ' + UI.esc(l.it.en) + '">' + UI.icon('plus', 12) + '</button>') +
           '</div>' +
           '<div class="mitem__p mono-num">' + UI.price(l.it.price * l.qty) + '</div>' +
         '</li>';
       }).join('') + '</ul>' +
+      (lines.length !== ok.length
+        ? '<p class="small mt-s">Sold-out drinks stay in your bag but are not charged. ' +
+          'Remove them, or ask at the bar.</p>' : '') +
 
       '<div class="card mt-m">' +
         '<div class="between"><span class="small">Subtotal</span>' +
@@ -410,8 +424,10 @@
           '</div><div class="err" id="oErr"></div></div>';
       }
 
-      html += '<button class="btn btn--block btn--lg mt-l" id="placeBtn" type="button">' +
-        '<span>Place order · ' + UI.price(total) + '</span></button>' +
+      html += (ok.length
+        ? '<button class="btn btn--block btn--lg mt-l" id="placeBtn" type="button">' +
+          '<span>Place order · ' + UI.price(total) + '</span></button>'
+        : '<p class="empty">Everything in your bag is sold out today.</p>') +
         '<p class="small center mt-s">Preview build — no payment is taken.</p>';
     }
 
@@ -437,7 +453,9 @@
 
       var place = UI.qs('#placeBtn');
       if (!place) return;
+      var sending = false;
       place.addEventListener('click', function () {
+        if (sending) return;                       // a second tap must not double-order
         var who = S.me();
         if (!who) {
           var name = (UI.qs('#oName').value || '').trim();
@@ -447,7 +465,13 @@
           if (!UI.validPhone(phone)) { err.textContent = 'That mobile number does not look right.'; UI.qs('#oPhone').focus(); return; }
           who = S.join(name, phone);
         }
-        var order = S.placeOrder(who.id, S.bag().slice(), mode, (UI.qs('#oNote').value || '').trim());
+        sending = true;
+        place.disabled = true;
+        // only send what the bar can make
+        var send = S.bag().filter(function (l) { return !S.isSoldOut(l.id); });
+        var order = S.placeOrder(who.id, send, mode, (UI.qs('#oNote').value || '').trim());
+        S.setBag([]);
+        CC.App.render();                           // clear the stale bag DOM
         V.orderDone(order);
       });
     }
@@ -616,13 +640,6 @@
         '<p class="small center mt-s">Already a member? Enter the same number to sign back in.</p>' +
       '</div>' +
 
-      '<div class="grid grid-3 mt-l">' +
-        CC.TIERS.slice(1).map(function (t) {
-          return '<div class="tile"><div class="eyebrow">' + t.name + '</div>' +
-            '<div class="mono-num" style="font-size:1.5rem;font-weight:200;margin:6px 0">' + UI.num(t.min) + '</div>' +
-            '<p class="small">' + UI.esc(t.perk) + '</p></div>';
-        }).join('') +
-      '</div>' +
       '<div style="height:40px"></div>' +
     '</div></div>' + V.footer();
 

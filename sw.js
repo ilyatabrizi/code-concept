@@ -1,18 +1,18 @@
 /* sw.js — offline shell for the Code Concept PWA.
    Cache-first for the app's own assets, network-first for navigations. */
-const VERSION = 'cc-06feb0b4';
+const VERSION = 'cc-01ed8a8e';
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './assets/css/app.css?v=06feb0b4',
-  './assets/js/qr.js?v=06feb0b4',
-  './assets/js/data.js?v=06feb0b4',
-  './assets/js/store.js?v=06feb0b4',
-  './assets/js/ui.js?v=06feb0b4',
-  './assets/js/views.js?v=06feb0b4',
-  './assets/js/crm.js?v=06feb0b4',
-  './assets/js/app.js?v=06feb0b4',
+  './assets/css/app.css?v=01ed8a8e',
+  './assets/js/qr.js?v=01ed8a8e',
+  './assets/js/data.js?v=01ed8a8e',
+  './assets/js/store.js?v=01ed8a8e',
+  './assets/js/ui.js?v=01ed8a8e',
+  './assets/js/views.js?v=01ed8a8e',
+  './assets/js/crm.js?v=01ed8a8e',
+  './assets/js/app.js?v=01ed8a8e',
   './assets/fonts/saira-latin.woff2',
   './assets/fonts/michroma-latin.woff2',
   './assets/fonts/IRANYekanXFaNum-Regular.woff2',

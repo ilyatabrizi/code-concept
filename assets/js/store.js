@@ -4,7 +4,8 @@
 
   var NS = 'cc.v1.';
   var K = { members: NS + 'members', orders: NS + 'orders', session: NS + 'session',
-            bag: NS + 'bag', seeded: NS + 'seeded', staff: NS + 'staff' };
+            bag: NS + 'bag', seeded: NS + 'seeded', staff: NS + 'staff',
+            soldout: NS + 'soldout' };
 
   var listeners = [];
   function emit() { listeners.forEach(function (fn) { try { fn(); } catch (e) { console.error(e); } }); }
@@ -62,6 +63,17 @@
 
     isStaff: function () { return read(K.staff, false) === true; },
     setStaff: function (v) { write(K.staff, !!v); emit(); },
+
+    // ---- availability (staff can 86 an item from the bar) -----------------
+    soldOut: function () { return read(K.soldout, []); },
+    isSoldOut: function (id) { return this.soldOut().indexOf(id) !== -1; },
+    toggleSoldOut: function (id) {
+      var list = this.soldOut(), i = list.indexOf(id);
+      if (i === -1) list.push(id); else list.splice(i, 1);
+      write(K.soldout, list);
+      emit();
+      return i === -1;                                   // true = now sold out
+    },
 
     // ---- members ----------------------------------------------------------
     findByPhone: function (phone) {
@@ -148,7 +160,6 @@
           });
         }
       }
-      this.setBag([]);
       emit();
       return o;
     },

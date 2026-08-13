@@ -61,6 +61,12 @@
   var tones = [], ticking = false;
   function collectTones() { tones = UI.qsa('[data-tone]'); }
 
+  /** Publish the top bar's real height so sticky elements can sit flush under it. */
+  function syncTopbarHeight() {
+    if (!topbar) return;
+    document.documentElement.style.setProperty('--topbarh', topbar.offsetHeight + 'px');
+  }
+
   function onScroll() {
     if (ticking) return;
     ticking = true;
@@ -109,6 +115,7 @@
   function addToBag(id) {
     var it = CC.ITEMS[id];
     if (!it) return;
+    if (S.isSoldOut(id)) { UI.toast('<b>' + UI.esc(it.en) + '</b> is sold out today'); return; }
     var bag = S.bag(), found = false;
     bag.forEach(function (l) { if (l.id === id) { l.qty++; found = true; } });
     if (!found) bag.push({ id: id, qty: 1 });
@@ -118,6 +125,7 @@
   }
 
   function bump(id, delta) {
+    if (delta > 0 && S.isSoldOut(id)) return;      // public API — guard it here too
     var bag = S.bag().map(function (l) {
       return l.id === id ? { id: l.id, qty: l.qty + delta } : l;
     }).filter(function (l) { return l.qty > 0; });
@@ -145,6 +153,17 @@
         '<a class="btn mt-m" href="#/">Back home</a></div>', mount: null };
     }
 
+    // A re-render replaces #app wholesale, which throws keyboard focus to <body>.
+    // Remember the focused control so it can be restored below.
+    var active = document.activeElement;
+    var focusKey = active && app.contains(active)
+      ? (active.id ? '#' + active.id
+         : active.dataset && active.dataset.sec ? '[data-sec="' + active.dataset.sec + '"]'
+         : active.dataset && active.dataset.avail ? '[data-avail="' + active.dataset.avail + '"]'
+         : active.dataset && active.dataset.tilladd ? '[data-tilladd="' + active.dataset.tilladd + '"]'
+         : null)
+      : null;
+
     app.innerHTML = out.html;
     collectTones();
     wireImages();
@@ -161,6 +180,10 @@
       if (h1) { h1.setAttribute('tabindex', '-1'); }
     } else if (scrollMemory[route.hash]) {
       window.scrollTo(0, scrollMemory[route.hash]);
+    }
+    if (focusKey) {
+      var back = UI.qs(focusKey, app);
+      if (back && back.focus) back.focus({ preventScroll: true });
     }
     onScroll();
   }
@@ -216,13 +239,20 @@
 
     window.addEventListener('hashchange', render);
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', function () { if (current) movePill(current.id); });
+    window.addEventListener('resize', function () {
+      if (current) movePill(current.id);
+      syncTopbarHeight();
+    });
     S.on(syncBadge);
 
+    syncTopbarHeight();
     render();
-    // fonts can shift tab widths — settle the pill once they land
+    // fonts can shift tab and top-bar metrics — settle both once they land
     if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () { if (current) movePill(current.id); });
+      document.fonts.ready.then(function () {
+        if (current) movePill(current.id);
+        syncTopbarHeight();
+      });
     }
 
     // ?nosw disables offline caching — useful while editing the site locally.

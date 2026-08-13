@@ -20,7 +20,7 @@ will do — GitHub Pages, Netlify, a folder on LimooHost.
 | `#/menu` | Full bilingual menu, searchable, filterable by section |
 | `#/order` | Bag, quantities, pickup/dine-in, live order status |
 | `#/profile` | Member card with a scannable QR, points, tier, rewards, history |
-| `#/crm` | Staff dashboard — passcode **2468** |
+| `#/crm` | Staff console — passcode held by Code Concept, not stored in this repo |
 
 ## Points
 
@@ -139,8 +139,11 @@ springs between tabs. It sits above the home indicator via
 - No payment step. "Place order" records the order and credits points; it takes
   no money.
 - Data is per-browser, as described above.
-- The CRM passcode is a demo gate printed on its own screen — it is not
-  security, and there is nothing sensitive behind it.
+- The staff passcode is held by Code Concept and is not written down in this
+  repo — only a hash of it is. Four digits is a soft gate against the curious,
+  not security: everything runs in the browser, so anyone determined can get
+  past it. Real protection needs a server, which is the natural next step when
+  the till and the phones need to share data anyway.
 - Menu items and prices were transcribed from the photograph of the printed
   card. The legible rows are accurate; a few items and prices in the cut-off
   sections were filled in plausibly and should be checked before this goes

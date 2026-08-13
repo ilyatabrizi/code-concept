@@ -69,6 +69,9 @@ html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
   background: var(--black);
+  /* `clip`, never `hidden` — hidden would make this a scroll container and
+     silently break every position:sticky inside it (the menu chip bar). */
+  overflow-x: clip;
 }
 body {
   margin: 0;
@@ -80,7 +83,6 @@ body {
   background: var(--black);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
   overscroll-behavior-y: none;
   padding-bottom: calc(var(--tabh) + env(safe-area-inset-bottom) + 28px);
 }
@@ -207,6 +209,9 @@ table { border-collapse: collapse; width: 100%; }
   will-change: transform;
   -webkit-tap-highlight-color: transparent;
 }
+/* the reset's `max-width:100%` lets a flex item shrink an icon to nothing when
+   the label is long — pin icons to their declared size */
+.btn > svg, .chip > svg, .add > svg, .qty > button > svg { flex: 0 0 auto; }
 .btn:hover { transform: translateY(-2px); }
 .btn:active { transform: scale(.97); }
 .btn[disabled] { opacity: .35; pointer-events: none; }
@@ -369,7 +374,6 @@ body.tabs-hidden .tabbar {
   font-size: clamp(1.95rem, 8.4vw, 5.4rem);
 }
 @media (min-width: 760px) {
-  .scrollcue { display: flex; }
   .hero__media { inset: 0; height: 100%; }
   .hero__media img { object-position: 50% 38%; filter: grayscale(1) contrast(1.05) brightness(.74); }
   .hero__media::after {
@@ -385,19 +389,18 @@ body.tabs-hidden .tabbar {
 }
 .hero__cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: clamp(18px, 3vw, 34px); }
 @media (max-width: 620px) { .hero__cta .btn { flex: 1 1 100%; } }
-.scrollcue {
-  display: none;
-  position: absolute; bottom: calc(var(--tabh) + 34px); right: var(--gut); z-index: 2;
-  writing-mode: vertical-rl; font-family: var(--tech); font-size: .5rem;
-  letter-spacing: .28em; text-transform: uppercase; color: var(--grey-2);
-  display: flex; align-items: center; gap: 12px;
+/* ---- sold out ------------------------------------------------------------- */
+.mitem.is-off .mitem__fa,
+.mitem.is-off .mitem__p { opacity: .38; }
+.mitem.is-off .mitem__en { opacity: .5; }
+.mitem.is-off .mitem__p { text-decoration: line-through; }
+/* the pill must stay readable — it carries the only "sold out" wording */
+.mitem.is-off .pts--off { opacity: 1; border-style: dashed; }
+.pts--off { border-style: dashed; }
+.add.add--off {
+  display: grid; place-items: center; opacity: .3;
+  border-style: dashed; cursor: not-allowed;
 }
-.scrollcue::after {
-  content: ''; width: 1px; height: 42px;
-  background: linear-gradient(to bottom, var(--grey-2), transparent);
-  animation: cue 2.4s var(--ease-io) infinite;
-}
-@keyframes cue { 0%, 100% { opacity: .25; transform: scaleY(.4); transform-origin: top; } 50% { opacity: 1; transform: scaleY(1); } }
 
 /* ---- marquee -------------------------------------------------------------- */
 .marquee {
@@ -451,20 +454,26 @@ a:hover > .frame img, .frame:hover img { transform: scale(1.045); }
 .pagehead { padding-top: calc(env(safe-area-inset-top, 0px) + 92px); }
 
 /* ---- menu ----------------------------------------------------------------- */
+/* The chips park directly under the fixed top bar. --topbarh is measured in JS
+   so the two stay flush whatever the safe-area inset or font metrics do. */
+.catbar-spacer { height: calc(var(--topbarh, 62px) + 14px); }
 .catbar {
-  position: sticky; top: 0; z-index: 40;
+  position: sticky; top: var(--topbarh, 62px); z-index: 40;
   display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
-  padding: 12px var(--gut);
-  padding-top: calc(env(safe-area-inset-top, 0px) + 62px);
+  padding: 11px var(--gut);
   margin-inline: calc(var(--gut) * -1);
   background: rgba(0, 0, 0, .72);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   backdrop-filter: blur(22px) saturate(180%);
   border-bottom: 1px solid rgba(255, 255, 255, .09);
   scroll-snap-type: x proximity;
+  /* fade the right edge so it reads as scrollable rather than cut off */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
 }
 .catbar::-webkit-scrollbar { display: none; }
-.catbar .chip { scroll-snap-align: start; }
+.catbar .chip { scroll-snap-align: start; flex: 0 0 auto; }
+.catbar .chip:last-child { margin-right: 26px; }
 
 /* A menu reads best in one narrow column, like the printed card. */
 .menucol { max-width: 860px; }
@@ -723,6 +732,114 @@ textarea.input { resize: vertical; min-height: 84px; line-height: 1.5; }
 @keyframes sheetIn { from { transform: translate(-50%, 100%); } }
 .sheet__grip { width: 38px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.24); margin: 4px auto 18px; }
 
+/* ---- staff console -------------------------------------------------------- */
+.crmnav {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  margin-inline: calc(var(--gut) * -1); padding-inline: var(--gut);
+  padding-block: 2px;
+}
+.crmnav::-webkit-scrollbar { display: none; }
+.crmnav .chip { flex: 0 0 auto; }
+.crmnav .chip:last-child { margin-right: 26px; }
+@media (max-width: 620px) {
+  /* signal that the section list scrolls rather than ends */
+  .crmnav {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
+  }
+}
+
+.kpi {
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: var(--r-m);
+  padding: 15px 16px;
+  background: rgba(255, 255, 255, .025);
+}
+.kpi__n {
+  font-size: clamp(1.5rem, 5.5vw, 2rem); font-weight: 200;
+  letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.kpi__l {
+  font-family: var(--tech); font-size: .5rem; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--grey-2); margin-top: 8px;
+}
+.kpi__s { font-size: .74rem; color: var(--grey-3); margin-top: 4px; }
+.u-t { font-size: .5em; margin-left: 2px; opacity: .6; }
+
+/* member rows — cards on a phone, the table from tablet up */
+.crm-mini {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; text-align: left; margin-bottom: 8px;
+  transition: background .2s, transform .2s var(--spring);
+}
+.crm-mini:hover { background: rgba(255, 255, 255, .05); }
+.crm-mini:active { transform: scale(.99); }
+.crm-cards { display: none; }
+@media (max-width: 760px) {
+  .crm-cards { display: block; }
+  .crm-table-wrap { display: none; }
+}
+
+/* till */
+.tillgrid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+}
+.tillbtn {
+  position: relative;
+  display: grid; gap: 3px; align-content: start;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: var(--r-m);
+  padding: 12px 13px; text-align: left;
+  background: rgba(255, 255, 255, .025);
+  transition: background .2s, border-color .2s, transform .2s var(--spring);
+}
+.tillbtn:hover:not(:disabled) { background: rgba(255, 255, 255, .08); border-color: rgba(255,255,255,.3); }
+.tillbtn:active:not(:disabled) { transform: scale(.96); }
+.tillbtn:disabled { opacity: .3; cursor: not-allowed; }
+.tillbtn__n { font-size: .88rem; line-height: 1.2; }
+.tillbtn__m { font-size: .68rem; color: var(--grey-2); font-variant-numeric: tabular-nums; }
+.tillbtn__q {
+  position: absolute; top: -7px; right: -7px;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: 999px; background: #fff; color: #000;
+  font-size: .72rem; font-weight: 600; line-height: 22px; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* availability switch */
+.toggle {
+  width: 46px; height: 27px; border-radius: 999px; flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, .22);
+  background: rgba(255, 255, 255, .06);
+  position: relative; transition: background .25s var(--ease), border-color .25s;
+}
+.toggle > i {
+  position: absolute; top: 2px; left: 2px;
+  width: 21px; height: 21px; border-radius: 50%;
+  background: var(--grey-2);
+  transition: transform .28s var(--spring), background .25s;
+}
+.toggle.on { background: #fff; border-color: #fff; }
+.toggle.on > i { transform: translateX(19px); background: #000; }
+
+/* 14-day revenue */
+.daychart { display: flex; align-items: flex-end; gap: 5px; height: 96px; }
+.daychart__col {
+  flex: 1; display: grid; grid-template-rows: 1fr auto; gap: 6px;
+  justify-items: center; height: 100%;
+}
+.daychart__col > i {
+  display: block; width: 100%; align-self: end; border-radius: 3px 3px 0 0;
+  background: linear-gradient(to top, rgba(255,255,255,.35), #fff);
+  animation: growcol .8s var(--ease) both;
+}
+.daychart__col > span {
+  font-family: var(--tech); font-size: .44rem; color: var(--grey-2);
+  text-transform: uppercase;
+}
+@keyframes growcol { from { height: 0 !important; } }
+
 /* ---- CRM ------------------------------------------------------------------ */
 .crm { background: var(--ink-1); min-height: 100svh; }
 .crm .card { border-color: rgba(255,255,255,.11); background: rgba(255,255,255,.025); }
@@ -734,6 +851,15 @@ table.crm-table th {
   padding: 0 14px 11px 0; white-space: nowrap; cursor: pointer; user-select: none;
 }
 table.crm-table th:hover { color: var(--white); }
+table.crm-table th .thsort {
+  font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
+  padding: 0; cursor: pointer;
+}
+.linkish {
+  font: inherit; color: inherit; text-align: left; padding: 0;
+  border-bottom: 1px solid transparent; transition: border-color .2s;
+}
+.linkish:hover { border-bottom-color: currentColor; }
 table.crm-table th[aria-sort]::after { content: ' ↑'; opacity: .8; }
 table.crm-table th[aria-sort="descending"]::after { content: ' ↓'; }
 table.crm-table td {
@@ -788,6 +914,11 @@ table.crm-table .num { font-variant-numeric: tabular-nums; }
 .foot a.u { border-bottom: 1px solid color-mix(in srgb, currentColor 30%, transparent); padding-bottom: 1px; transition: border-color .25s; }
 .foot a.u:hover { border-bottom-color: currentColor; }
 .foot__legal { font-size: .7rem; color: var(--grey-2); letter-spacing: .02em; }
+.alpha {
+  color: #ffcc00;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
 
 /* ---- install prompt ------------------------------------------------------- */
 .a2hs {
@@ -830,6 +961,6 @@ table.crm-table .num { font-variant-numeric: tabular-nums; }
 }
 
 @media print {
-  .tabbar, .topbar, .toasts, .a2hs, .grain, .scrollcue { display: none !important; }
+  .tabbar, .topbar, .toasts, .a2hs, .grain { display: none !important; }
   body { background: #fff; color: #000; padding: 0; }
 }
