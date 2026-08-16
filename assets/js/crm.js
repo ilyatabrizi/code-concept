@@ -248,11 +248,11 @@
       '</div>' +
       '<div class="tillgrid mt-s">' +
         CC.MENU.concat([{ id: 'extras', label: 'Add-ons', items: CC.EXTRAS }]).map(function (sec) {
-          return sec.items.map(function (it) {
+          return CC.sectionItems(sec).map(function (it) {
             var off = S.isSoldOut(it.id);
             return '<button class="tillbtn' + (off ? ' is-off' : '') + '" type="button" ' +
               (off ? 'disabled ' : '') + 'data-tilladd="' + it.id + '" ' +
-              'data-f="' + UI.esc((it.en + ' ' + it.fa + ' ' + sec.label).toLowerCase()) + '">' +
+              'data-f="' + UI.esc((it.en + ' ' + (it.desc || '') + ' ' + sec.label).toLowerCase()) + '">' +
               '<span class="tillbtn__n">' + UI.esc(it.en) + '</span>' +
               '<span class="tillbtn__m">' + UI.price(it.price) +
                 (off ? ' · sold out' : ' · ' + it.pts + ' pts') + '</span>' +
@@ -348,9 +348,9 @@
       'straight away — they cannot add it to a bag.' +
       (off ? ' <strong>' + off + ' off right now.</strong>' : '') + '</p>' +
 
-      CC.MENU.map(function (sec) {
+      CC.MENU.concat([{ id: 'extras', label: 'Add to any drink', items: CC.EXTRAS }]).map(function (sec) {
         return '<div class="mt-l"><div class="eyebrow">' + UI.esc(sec.label) + '</div>' +
-          '<ul class="mt-s">' + sec.items.map(function (it) {
+          '<ul class="mt-s">' + CC.sectionItems(sec).map(function (it) {
             var isOff = S.isSoldOut(it.id);
             return '<li class="lrow">' +
               '<div style="min-width:0"><div' + (isOff ? ' style="opacity:.45"' : '') + '>' +
@@ -730,10 +730,11 @@
       }
       var charge = UI.qs('#tillCharge');
       if (charge) charge.addEventListener('click', function () {
-        var lines = Object.keys(till).filter(function (k) { return till[k] > 0; })
+        var lines = Object.keys(till).filter(function (k) { return till[k] > 0 && CC.ITEMS[k]; })
           .map(function (id) { return { id: id, qty: till[id] }; });
         if (!lines.length) return;
         var o = S.placeOrder(tillMember, lines, 'counter', '');
+        if (!o) { UI.toast('Nothing on that ticket could be rung up'); return; }
         S.setStatus(o.id, 'collected');
         var who = tillMember
           ? S.members().filter(function (x) { return x.id === tillMember; })[0] : null;

@@ -16,21 +16,6 @@
   font-weight: 100 900; font-style: normal; font-display: swap;
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2212;
 }
-@font-face {
-  font-family: 'YekanFaNum';
-  src: url('../fonts/IRANYekanXFaNum-Regular.woff2') format('woff2');
-  font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'YekanFaNum';
-  src: url('../fonts/IRANYekanXFaNum-Medium.woff2') format('woff2');
-  font-weight: 500; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'YekanFaNum';
-  src: url('../fonts/IRANYekanXFaNum-Bold.woff2') format('woff2');
-  font-weight: 700; font-style: normal; font-display: swap;
-}
 
 /* ---- tokens --------------------------------------------------------------- */
 :root {
@@ -45,7 +30,6 @@
 
   --sans: 'Saira', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --tech: 'Michroma', 'Saira', monospace;
-  --fa: 'YekanFaNum', 'Saira', Tahoma, sans-serif;
 
   --r-m: 16px;
   --r-l: 24px;
@@ -166,14 +150,6 @@ table { border-collapse: collapse; width: 100%; }
 [data-tone="light"] .small { color: var(--grey-2); }
 .mono-num { font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 
-.fa {
-  font-family: var(--fa);
-  direction: rtl;
-  unicode-bidi: isolate;
-  text-align: left;          /* an RTL snippet inside an LTR column */
-  font-weight: 400;
-  line-height: 1.9;
-}
 [dir="ltr"] { direction: ltr; unicode-bidi: isolate; }
 
 /* ---- layout --------------------------------------------------------------- */
@@ -392,7 +368,7 @@ body.tabs-hidden .tabbar {
 .hero__cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: clamp(18px, 3vw, 34px); }
 @media (max-width: 620px) { .hero__cta .btn { flex: 1 1 100%; } }
 /* ---- sold out ------------------------------------------------------------- */
-.mitem.is-off .mitem__fa,
+.mitem.is-off .mitem__d,
 .mitem.is-off .mitem__p { opacity: .38; }
 .mitem.is-off .mitem__en { opacity: .5; }
 .mitem.is-off .mitem__p { text-decoration: line-through; }
@@ -503,14 +479,38 @@ a:hover > .frame img, .frame:hover img { transform: scale(1.045); }
 }
 /* Persian gloss: shaped right-to-left, but flushed to the English name it
    belongs to rather than to the far edge of a wide row. */
-.mitem__fa {
-  font-family: var(--fa); direction: rtl; unicode-bidi: isolate;
-  text-align: left; font-size: .78rem; color: var(--grey-2); line-height: 1.9;
-}
-[data-tone="light"] .mitem__fa { color: var(--grey-2); }
+.mitem__d { font-size: .78rem; color: var(--grey-2); line-height: 1.4; margin-top: 3px; }
+[data-tone="light"] .mitem__d { color: var(--grey-2); }
 .mitem__p { font-variant-numeric: tabular-nums; font-size: .98rem; font-weight: 400; white-space: nowrap; }
 .mitem__p small { font-size: .62rem; color: var(--grey-2); margin-left: 3px; letter-spacing: .06em; }
 .mitem.is-hidden { display: none; }
+
+/* three bean grades for one drink — the price is the choice */
+.mitem--var { grid-template-columns: 1fr; align-items: start; gap: 12px; }
+.beans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.bean {
+  display: grid; gap: 2px; justify-items: start; text-align: left;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: var(--r-m);
+  padding: 10px 12px;
+  transition: background .2s, border-color .2s, transform .2s var(--spring);
+}
+.bean:hover:not(:disabled) { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .34); }
+.bean:active:not(:disabled) { transform: scale(.96); }
+/* readable, not invisible — the price and the word "sold out" still have to be
+   legible or the row just looks broken */
+.bean:disabled { opacity: .55; cursor: not-allowed; border-style: dashed; }
+.bean:disabled .bean__pts { color: var(--grey-3); }
+.bean__l {
+  font-family: var(--tech); font-size: .5rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--grey-3);
+}
+.bean__p { font-size: .95rem; }
+.bean__pts { font-size: .62rem; color: var(--grey-2); font-variant-numeric: tabular-nums; }
+@media (min-width: 620px) {
+  .mitem--var { grid-template-columns: 1fr auto; align-items: center; }
+  .beans { width: auto; grid-template-columns: repeat(3, 96px); }
+}
 
 .add {
   width: 34px; height: 34px; border-radius: 50%;

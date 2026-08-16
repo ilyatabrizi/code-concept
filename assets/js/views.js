@@ -21,16 +21,17 @@
       '<span class="idx">' + (extra || idx) + '</span></div>';
   }
 
+  /** A plain menu line: one price, one add button. */
   function itemRow(it) {
     var off = S.isSoldOut(it.id);
     return '<li class="mitem' + (off ? ' is-off' : '') + '" data-item="' + it.id + '" data-search="' +
-        UI.esc((it.en + ' ' + it.fa).toLowerCase()) + '">' +
+        UI.esc((it.en + ' ' + (it.desc || '')).toLowerCase()) + '">' +
       '<div class="mitem__t">' +
         '<div class="mitem__en">' + UI.esc(it.en) +
           (off ? '<span class="pts pts--off">Sold out</span>'
                : '<span class="pts">' + it.pts + ' PTS</span>') +
         '</div>' +
-        '<div class="mitem__fa">' + UI.esc(it.fa) + '</div>' +
+        (it.desc ? '<div class="mitem__d">' + UI.esc(it.desc) + '</div>' : '') +
       '</div>' +
       '<div class="mitem__p mono-num">' + UI.price(it.price) + '</div>' +
       (off
@@ -38,6 +39,37 @@
         : '<button class="add" data-add="' + it.id + '" type="button" ' +
             'aria-label="Add ' + UI.esc(it.en) + ' to bag">' + UI.icon('plus', 15) + '</button>') +
     '</li>';
+  }
+
+  /** Espresso and Americano are one drink at three bean grades. Show the drink
+      once and let the grade be the choice — each grade is its own item underneath. */
+  function variantRow(base) {
+    var picks = base.variants.map(function (v) { return CC.ITEMS[base.id + ':' + v.id]; });
+    var allOff = picks.every(function (p) { return S.isSoldOut(p.id); });
+    return '<li class="mitem mitem--var' + (allOff ? ' is-off' : '') + '" data-search="' +
+        UI.esc((base.en + ' ' + picks.map(function (p) { return p.variantLabel; }).join(' ')).toLowerCase()) + '">' +
+      '<div class="mitem__t">' +
+        '<div class="mitem__en">' + UI.esc(base.en) +
+          (allOff ? '<span class="pts pts--off">Sold out</span>' : '') +
+        '</div>' +
+        (base.desc ? '<div class="mitem__d">' + UI.esc(base.desc) + '</div>' : '') +
+      '</div>' +
+      '<div class="beans">' + picks.map(function (p) {
+        var off = S.isSoldOut(p.id);
+        return '<button class="bean" type="button"' + (off ? ' disabled' : ' data-add="' + p.id + '"') +
+          ' aria-label="Add ' + UI.esc(p.en) + ' to bag">' +
+          '<span class="bean__l">' + UI.esc(p.variantLabel) + '</span>' +
+          '<span class="bean__p mono-num">' + UI.price(p.price) + '</span>' +
+          '<span class="bean__pts">' + (off ? 'sold out' : p.pts + ' pts') + '</span>' +
+        '</button>';
+      }).join('') + '</div>' +
+    '</li>';
+  }
+
+  function sectionRows(sec) {
+    return sec.items.map(function (it) {
+      return it.variants ? variantRow(it) : itemRow(it);
+    }).join('');
   }
 
   function tierBlock(m) {
@@ -137,7 +169,7 @@
                 '<div class="frame__cap">' + it.pts + ' points</div></div>' +
               '<div class="between mt-s" style="align-items:flex-start">' +
                 '<div><div class="h3">' + UI.esc(it.en) + '</div>' +
-                '<div class="mitem__fa">' + UI.esc(it.fa) + '</div></div>' +
+                (it.desc ? '<div class="mitem__d">' + UI.esc(it.desc) + '</div>' : '') + '</div>' +
                 '<div class="mono-num nowrap">' + UI.price(it.price) + '</div>' +
               '</div>' +
               '<button class="btn btn--ghost btn--sm mt-s" data-add="' + it.id + '" type="button">' +
@@ -173,9 +205,15 @@
             'automatically. No stamps, no plastic, nothing to carry. Each item on the menu ' +
             'carries its own value — some small, some worth queueing for.</p>' +
             '<div class="row mt-m rv rv-d2" style="flex-wrap:wrap;gap:8px">' +
-              CC.MENU[0].items.slice(3, 8).map(function (it) {
-                return '<span class="pts">' + it.pts + ' · ' + UI.esc(it.en.split(' ')[0]) + '</span>';
-              }).join('') +
+              // a hand-picked spread, so the range the copy promises is visible.
+              // Never slice a section blind: Coffee-Based holds variant groupings,
+              // which carry no price or points of their own.
+              ['brew-coldbrew', 'mock-churchill', 'milk-latte', 'tea-relaxing', 'smo-mango']
+                .map(function (id) { return CC.ITEMS[id]; })
+                .filter(Boolean)
+                .map(function (it) {
+                  return '<span class="pts">' + it.pts + ' · ' + UI.esc(it.en) + '</span>';
+                }).join('') +
             '</div>' +
             '<a class="btn btn--dark mt-l rv rv-d3" href="#/profile">Start collecting ' + UI.icon('arrow', 16) + '</a>' +
           '</div>' +
@@ -184,7 +222,7 @@
               '<div class="eyebrow">Rewards</div>' +
               '<ul class="mt-s">' + CC.REWARDS.map(function (r) {
                 return '<li class="lrow"><div><div>' + UI.esc(r.en) + '</div>' +
-                  '<div class="mitem__fa" style="color:var(--grey-2)">' + UI.esc(r.fa) + '</div></div>' +
+                  '</div>' +
                   '<span class="pts">' + UI.num(r.cost) + ' PTS</span></li>';
               }).join('') + '</ul>' +
             '</div>' +
@@ -207,7 +245,6 @@
           '<div>' +
             '<div class="eyebrow">Find us</div>' +
             '<p class="small mt-s">' + B.address + '</p>' +
-            '<p class="small mt-s fa">تبریز، ایران</p>' +
           '</div>' +
           '<div>' +
             '<div class="eyebrow">Hours</div>' +
@@ -260,7 +297,7 @@
 
         '<header class="menucol" style="padding-top:clamp(30px,6vw,54px)">' +
           '<h1 class="h2 rv in">Menu</h1>' +
-          '<p class="small mt-s">Prices in thousand Toman · <span class="fa">قیمت‌ها به هزار تومان</span></p>' +
+          '<p class="small mt-s">All prices in thousand Toman</p>' +
           '<div class="field mt-m" style="max-width:420px">' +
             '<div style="position:relative">' +
               '<span style="position:absolute;left:15px;top:50%;transform:translateY(-50%);opacity:.5">' +
@@ -276,16 +313,14 @@
             return '<section class="menusec" data-sec="' + sec.id + '" id="sec-' + sec.id + '">' +
               '<div class="menusec__head">' +
                 '<h2 class="h3">' + UI.esc(sec.label) + '</h2>' +
-                '<span class="mitem__fa">' + UI.esc(sec.fa) + '</span>' +
                 '<span class="menusec__note" style="margin-left:auto">' + UI.esc(sec.note) + '</span>' +
               '</div>' +
-              '<ul>' + sec.items.map(function (it) { return itemRow(it); }).join('') + '</ul>' +
+              '<ul>' + sectionRows(sec) + '</ul>' +
             '</section>';
           }).join('') +
 
           '<section class="menusec" data-sec="extras">' +
-            '<div class="menusec__head"><h2 class="h3">Add to any drink</h2>' +
-            '<span class="mitem__fa">افزودنی‌ها</span></div>' +
+            '<div class="menusec__head"><h2 class="h3">Add to any drink</h2></div>' +
             '<ul>' + CC.EXTRAS.map(function (it) { return itemRow(it); }).join('') + '</ul>' +
           '</section>' +
         '</div>' +
@@ -381,7 +416,7 @@
           '<div class="mitem__t"><div class="mitem__en">' + UI.esc(l.it.en) +
             (l.off ? '<span class="pts pts--off">Sold out</span>'
                    : '<span class="pts">' + (l.it.pts * l.qty) + ' PTS</span>') + '</div>' +
-            '<div class="mitem__fa">' + UI.esc(l.it.fa) + '</div></div>' +
+            '</div>' +
           '<div class="qty" data-q="' + l.it.id + '">' +
             '<button type="button" data-dec="' + l.it.id + '" aria-label="One fewer ' + UI.esc(l.it.en) + '">' + UI.icon('minus', 12) + '</button>' +
             '<output>' + l.qty + '</output>' +
@@ -475,10 +510,13 @@
         sending = true;
         place.disabled = true;
         // only send what the bar can make
-        var send = S.bag().filter(function (l) { return !S.isSoldOut(l.id); });
+        var send = S.bag().filter(function (l) {
+          return CC.ITEMS[l.id] && !S.isSoldOut(l.id);
+        });
         var order = S.placeOrder(who.id, send, mode, (UI.qs('#oNote').value || '').trim());
         S.setBag([]);
         CC.App.render();                           // clear the stale bag DOM
+        if (!order) { UI.toast('Nothing in that order could be made'); return; }
         V.orderDone(order);
       });
     }
@@ -559,7 +597,7 @@
       '<ul class="mt-s">' + CC.REWARDS.map(function (r) {
         var can = me.points >= r.cost;
         return '<li class="lrow"><div><div>' + UI.esc(r.en) + '</div>' +
-          '<div class="mitem__fa" style="color:var(--grey-2)">' + UI.esc(r.fa) + '</div></div>' +
+          '</div>' +
           '<button class="btn btn--sm ' + (can ? '' : 'btn--ghost') + '" data-redeem="' + r.id + '" type="button"' +
           (can ? '' : ' disabled') + '>' + UI.num(r.cost) + ' pts</button></li>';
       }).join('') + '</ul>' +

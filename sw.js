@@ -1,23 +1,20 @@
 /* sw.js — offline shell for the Code Concept PWA.
    Cache-first for the app's own assets, network-first for navigations. */
-const VERSION = 'cc-665cec19';
+const VERSION = 'cc-cb1b9be9';
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './assets/css/app.css?v=665cec19',
-  './assets/js/qr.js?v=665cec19',
-  './assets/js/data.js?v=665cec19',
-  './assets/js/store.js?v=665cec19',
-  './assets/js/ui.js?v=665cec19',
-  './assets/js/views.js?v=665cec19',
-  './assets/js/crm.js?v=665cec19',
-  './assets/js/app.js?v=665cec19',
+  './assets/css/app.css?v=cb1b9be9',
+  './assets/js/qr.js?v=cb1b9be9',
+  './assets/js/data.js?v=cb1b9be9',
+  './assets/js/store.js?v=cb1b9be9',
+  './assets/js/ui.js?v=cb1b9be9',
+  './assets/js/views.js?v=cb1b9be9',
+  './assets/js/crm.js?v=cb1b9be9',
+  './assets/js/app.js?v=cb1b9be9',
   './assets/fonts/saira-latin.woff2',
   './assets/fonts/michroma-latin.woff2',
-  './assets/fonts/IRANYekanXFaNum-Regular.woff2',
-  './assets/fonts/IRANYekanXFaNum-Medium.woff2',
-  './assets/fonts/IRANYekanXFaNum-Bold.woff2',
   './assets/img/logo-white.png',
   './assets/img/alpha-mark.png',
   './assets/img/hero.webp',

@@ -2,7 +2,10 @@
 (function (CC) {
   'use strict';
 
-  var NS = 'cc.v1.';
+  /* v2 = the real printed menu. Every item id changed, so a returning visitor's
+     v1 bag, favourite drink and seeded history all point at drinks that no longer
+     exist. Bumping the namespace retires that data instead of half-showing it. */
+  var NS = 'cc.v2.';
   var K = { members: NS + 'members', orders: NS + 'orders', session: NS + 'session',
             bag: NS + 'bag', seeded: NS + 'seeded', staff: NS + 'staff',
             soldout: NS + 'soldout' };
@@ -122,12 +125,14 @@
     /** lines: [{id, qty}] — prices and points are re-read from the menu. */
     placeOrder: function (memberId, lines, mode, note) {
       var orders = this.orders(), total = 0, points = 0;
-      var detailed = lines.map(function (l) {
-        var it = CC.ITEMS[l.id];
-        total += it.price * l.qty;
-        points += it.pts * l.qty;
-        return { id: it.id, en: it.en, fa: it.fa, qty: l.qty, price: it.price, pts: it.pts };
-      });
+      var detailed = lines.map(function (l) { return { it: CC.ITEMS[l.id], qty: l.qty }; })
+        .filter(function (l) { return l.it; })          // an id we no longer sell
+        .map(function (l) {
+          total += l.it.price * l.qty;
+          points += l.it.pts * l.qty;
+          return { id: l.it.id, en: l.it.en, qty: l.qty, price: l.it.price, pts: l.it.pts };
+        });
+      if (!detailed.length) return null;
       var o = {
         id: 'o' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
         ref: orderRef(),
@@ -245,7 +250,7 @@
             var it = CC.ITEMS[ids[Math.floor(rnd() * ids.length)]];
             var qty = 1 + (rnd() > 0.82 ? 1 : 0);
             if (lines.some(function (l) { return l.id === it.id; })) continue;
-            lines.push({ id: it.id, en: it.en, fa: it.fa, qty: qty, price: it.price, pts: it.pts });
+            lines.push({ id: it.id, en: it.en, qty: qty, price: it.price, pts: it.pts });
             total += it.price * qty; pts += it.pts * qty;
           }
           if (!lines.length) continue;

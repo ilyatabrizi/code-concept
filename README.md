@@ -113,7 +113,7 @@ assets/
   js/crm.js             staff dashboard
   js/app.js             router, tab bar, scroll chrome, PWA wiring
   img/                  photography, converted to true greyscale
-  fonts/                Michroma, Saira, IRANYekanX FaNum
+  fonts/                Michroma, Saira
 icons/                  app icons + iOS splash screens
 ```
 
@@ -126,8 +126,9 @@ filtered in CSS.
 **Michroma** carries the small tracked labels; its square counters and flat
 terminals are the closest free match to the logo's lettering. **Saira** handles
 everything else — a subtly squared grotesque that sits with the mark instead of
-fighting it. Persian is set in **IRANYekanX FaNum**, which renders Latin digit
-keystrokes as ۰–۹ automatically.
+fighting it. The site is English throughout, matching Code Concept's own signage,
+cup labels and printed card, so no Persian face is shipped. A Persian/RTL edition
+would need IRANYekanX FaNum added back.
 
 The navigation is an iOS-style glass pill: real `backdrop-filter` blur and
 saturation, a hairline border, an inner highlight, and a sliding indicator that
