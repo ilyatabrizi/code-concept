@@ -1,0 +1,15 @@
+# Included by index.php; never fetched directly.
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>
+# Belt and braces for hosts that ignore the above in a .htaccess context.
+<FilesMatch "\.php$">
+  <IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^ - [F,L]
+  </IfModule>
+</FilesMatch>

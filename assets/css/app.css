@@ -656,6 +656,28 @@ textarea.input { resize: vertical; min-height: 84px; line-height: 1.5; }
 .segment button[aria-pressed="true"] span { color: var(--black); }
 [data-tone="light"] .segment button[aria-pressed="true"] span { color: var(--white); }
 
+/* ---- auth ------------------------------------------------------------------ */
+.linklike {
+  font-size: .82rem; color: var(--grey-3);
+  border-bottom: 1px solid color-mix(in srgb, currentColor 32%, transparent);
+  padding-bottom: 1px; transition: color .2s, border-color .2s;
+}
+.linklike:hover { color: var(--white); border-bottom-color: currentColor; }
+.code-input {
+  text-align: center; letter-spacing: .55em; font-size: 1.5rem;
+  font-variant-numeric: tabular-nums; padding-left: 1.05em;
+}
+.pwwrap { position: relative; }
+.pwwrap .input { padding-right: 74px; }
+.pwtoggle {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  font-family: var(--tech); font-size: .5rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--grey-3);
+  padding: 9px 11px; border-radius: 999px;
+  transition: color .2s, background .2s;
+}
+.pwtoggle:hover { color: var(--white); background: rgba(255, 255, 255, .08); }
+
 /* ---- lists / rows --------------------------------------------------------- */
 .lrow {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;

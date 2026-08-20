@@ -1,0 +1,21 @@
+# Everything under /api is JSON. Keep the site's HTML 404 page out of it.
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /api/
+
+  # Pass the Authorization header through; CGI/FastCGI strips it otherwise.
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # /api/otp/request -> index.php?route=otp/request
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
+</IfModule>
+
+# index.php is the only entry point. Deliberately no blanket "Require all
+# granted" here — it would override the deny inside lib/ and publish the
+# library, config loader included.

@@ -636,9 +636,15 @@
 
     function mount() {
       UI.qs('#signOut').addEventListener('click', function () {
-        S.signOut();
-        UI.toast('Signed out');
-        CC.App.go('#/profile');
+        // End it on the server as well; the local token alone leaves a live
+        // session that anyone holding the token could keep using.
+        var done = function () {
+          S.signOut();
+          authReset('signup');          // no leftover number or ticket on screen
+          UI.toast('Signed out');
+          CC.App.go('#/profile');
+        };
+        if (CC.Api) CC.Api.logout().then(done, done); else done();
       });
       UI.qs('#resetDemo').addEventListener('click', function () {
         UI.sheet('<div class="center"><div class="eyebrow">Reset preview</div>' +
@@ -667,42 +673,268 @@
     return { html: html, tone: 'dark', mount: mount };
   };
 
+  // ===========================================================================
+  // SIGN UP / SIGN IN
+  // Identity is server-side: a code by SMS proves the number, then a password
+  // is set once and used from then on. Module-level so a re-render mid-flow
+  // does not throw the customer back to step one.
+  // ===========================================================================
+  var authGen = 0;
+  var auth = { mode: 'signup', step: 'phone', phone: '', name: '', ticket: '',
+               busy: false, err: '', note: '', gen: 0 };
+
+  function authReset(mode) {
+    authGen++;                                  // strands any request in flight
+    auth = { mode: mode || 'signup', step: 'phone', phone: '', name: '', ticket: '',
+             busy: false, err: '', note: '', gen: authGen };
+  }
+
+  /* A slow request that resolves after the customer has switched tabs, gone
+     back, or finished signing up must not write its result into the new flow —
+     that is how a stale ticket or somebody else's number ends up on screen. */
+  function authCurrent(gen) { return gen === auth.gen; }
+
+  function authField(id, label, attrs, value) {
+    return '<div class="field mt-s"><label for="' + id + '">' + label + '</label>' +
+      '<input class="input" id="' + id + '" ' + attrs +
+      ' value="' + UI.esc(value || '') + '"></div>';
+  }
+
   V.join = function () {
+    var a = auth;
+    var isSignup = a.mode === 'signup';
+    var isReset = a.mode === 'reset';
+
+    var head = isSignup
+      ? { eyebrow: 'Community card', title: 'Join, and every<br>drink counts.',
+          lede: 'We text you a code to check the number is yours, then you pick a password. ' +
+                'After that it is just number and password.' }
+      : isReset
+        ? { eyebrow: 'Reset password', title: 'Forgotten it?',
+            lede: 'Enter your number and we will text you a code, then you can choose a new password.' }
+        : { eyebrow: 'Welcome back', title: 'Sign in.',
+            lede: 'Your number and the password you chose when you joined.' };
+
     var html = '<div data-tone="dark"><div class="wrap pagehead">' +
-      '<div class="eyebrow">Community card</div>' +
-      '<h1 class="h2" style="margin-top:8px">Join, and every<br>drink counts.</h1>' +
-      '<p class="lede mt-m">Name and mobile number — that is the whole sign-up. We make you a card ' +
-      'with a scannable code, and points start landing the moment you order.</p>' +
+      '<div class="eyebrow">' + head.eyebrow + '</div>' +
+      '<h1 class="h2" style="margin-top:8px">' + head.title + '</h1>' +
+      '<p class="lede mt-m">' + head.lede + '</p>' +
 
-      '<div class="card mt-l" style="max-width:460px">' +
-        '<div class="field"><label for="jName">Name</label>' +
-          '<input class="input" id="jName" autocomplete="name" placeholder="Your name"></div>' +
-        '<div class="field mt-s"><label for="jPhone">Mobile</label>' +
-          '<input class="input" id="jPhone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" ' +
-          'placeholder="0914 000 0000"></div>' +
-        '<div class="err" id="jErr"></div>' +
-        '<button class="btn btn--block mt-s" id="joinBtn" type="button">Create my card</button>' +
-        '<p class="small center mt-s">Already a member? Enter the same number to sign back in.</p>' +
-      '</div>' +
+      '<div class="card mt-l" style="max-width:460px">';
 
+    // --- which flow --------------------------------------------------------
+    if (!isReset && a.step === 'phone') {
+      html += '<div class="segment" id="authMode">' +
+        '<button type="button" data-mode="signup" aria-pressed="' + isSignup + '"><span>Create account</span></button>' +
+        '<button type="button" data-mode="login" aria-pressed="' + (!isSignup) + '"><span>Sign in</span></button>' +
+      '</div>';
+    }
+
+    // --- step 1: who ------------------------------------------------------
+    if (a.step === 'phone') {
+      if (isSignup) {
+        html += authField('aName', 'Name', 'autocomplete="name" placeholder="Your name"', a.name);
+      }
+      html += authField('aPhone', 'Mobile',
+        'type="tel" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="0912 000 0000"', a.phone);
+
+      if (a.mode === 'login') {
+        html += authField('aPass', 'Password', 'type="password" autocomplete="current-password" placeholder="Your password"', '');
+      }
+      html += '<div class="err" id="aErr">' + UI.esc(a.err) + '</div>' +
+        '<button class="btn btn--block mt-s" id="aGo" type="button"' + (a.busy ? ' disabled' : '') + '>' +
+        (a.busy ? 'Please wait…' : (a.mode === 'login' ? 'Sign in' : 'Send me a code')) + '</button>';
+      if (a.mode === 'login') {
+        html += '<button class="linklike mt-s" id="aForgot" type="button">Forgot your password?</button>';
+      }
+    }
+
+    // --- step 2: the code --------------------------------------------------
+    if (a.step === 'code') {
+      html += '<p class="small">Code sent to <strong dir="ltr">' + UI.esc(a.phone) + '</strong>. ' +
+        'It is valid for two minutes.</p>' +
+        '<div class="field mt-s"><label for="aCode">Code</label>' +
+          '<input class="input code-input" id="aCode" inputmode="numeric" autocomplete="one-time-code" ' +
+          'maxlength="5" placeholder="•••••"></div>' +
+        '<div class="err" id="aErr">' + UI.esc(a.err) + '</div>' +
+        '<button class="btn btn--block mt-s" id="aGo" type="button"' + (a.busy ? ' disabled' : '') + '>' +
+        (a.busy ? 'Checking…' : 'Verify') + '</button>' +
+        '<div class="between mt-s">' +
+          '<button class="linklike" id="aBack" type="button">Change number</button>' +
+          '<button class="linklike" id="aResend" type="button">Resend code</button>' +
+        '</div>';
+      if (a.note) html += '<p class="small mt-s" style="opacity:.7">' + UI.esc(a.note) + '</p>';
+    }
+
+    // --- step 3: the password ----------------------------------------------
+    if (a.step === 'password') {
+      html += '<p class="small">' + (isReset ? 'Choose a new password.' : 'Last step — choose a password.') +
+        ' At least 8 characters.</p>' +
+        '<div class="field mt-s"><label for="aPass2">Password</label>' +
+          '<div class="pwwrap">' +
+            '<input class="input" id="aPass2" type="password" autocomplete="new-password" placeholder="At least 8 characters">' +
+            '<button class="pwtoggle" id="aPeek" type="button" aria-label="Show password">Show</button>' +
+          '</div></div>' +
+        '<div class="err" id="aErr">' + UI.esc(a.err) + '</div>' +
+        '<button class="btn btn--block mt-s" id="aGo" type="button"' + (a.busy ? ' disabled' : '') + '>' +
+        (a.busy ? 'Saving…' : (isReset ? 'Save new password' : 'Create my card')) + '</button>';
+    }
+
+    html += '</div>' +
       '<div style="height:40px"></div>' +
     '</div></div>' + V.footer();
 
     function mount() {
-      function submit() {
-        var name = (UI.qs('#jName').value || '').trim();
-        var phone = (UI.qs('#jPhone').value || '').trim();
-        var err = UI.qs('#jErr');
-        if (name.length < 2) { err.textContent = 'Please add your name.'; UI.qs('#jName').focus(); return; }
-        if (!UI.validPhone(phone)) { err.textContent = 'That mobile number does not look right.'; UI.qs('#jPhone').focus(); return; }
-        var existed = !!S.findByPhone(phone);
-        var m = S.join(name, phone);
-        UI.toast(existed ? 'Welcome back, <b>' + UI.esc(m.name.split(' ')[0]) + '</b>'
-                         : 'Card created · <b>' + m.code + '</b>');
+      var errEl = UI.qs('#aErr');
+      var gen = auth.gen;
+      function stale() { return !authCurrent(gen); }
+      function fail(e) {
+        if (stale()) return;
+        auth.busy = false;
+        auth.err = (e && e.message) || 'Something went wrong.';
         CC.App.render();
       }
-      UI.qs('#joinBtn').addEventListener('click', submit);
-      UI.qs('#jPhone').addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+      function go(fn) { auth.busy = true; auth.err = ''; CC.App.render(); fn(); }
+
+      UI.qsa('#authMode button').forEach(function (b) {
+        b.addEventListener('click', function () { authReset(b.dataset.mode); CC.App.render(); });
+      });
+      var forgot = UI.qs('#aForgot');
+      if (forgot) forgot.addEventListener('click', function () { authReset('reset'); CC.App.render(); });
+      var back = UI.qs('#aBack');
+      if (back) back.addEventListener('click', function () {
+        auth.step = 'phone'; auth.err = ''; auth.note = ''; CC.App.render();
+      });
+      var peek = UI.qs('#aPeek');
+      if (peek) peek.addEventListener('click', function () {
+        var f = UI.qs('#aPass2');
+        var show = f.type === 'password';
+        f.type = show ? 'text' : 'password';
+        peek.textContent = show ? 'Hide' : 'Show';
+        peek.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        f.focus();
+      });
+
+      function sendCode(purpose) {
+        var phone = (UI.qs('#aPhone') || {}).value || auth.phone;
+        auth.phone = String(phone).trim();
+        if (!UI.validPhone(auth.phone)) { auth.err = 'That mobile number does not look right.'; CC.App.render(); return; }
+        if (auth.mode === 'signup') {
+          auth.name = ((UI.qs('#aName') || {}).value || '').trim();
+          if (auth.name.length < 2) { auth.err = 'Please add your name.'; CC.App.render(); return; }
+        }
+        go(function () {
+          CC.Api.requestCode(auth.phone, purpose).then(function (d) {
+            if (stale()) return;
+            auth.busy = false;
+            auth.step = 'code';
+            auth.phone = d.sent_to || auth.phone;
+            auth.note = d.dry_run ? 'Test mode: no SMS was sent. The code is in the server log.' : '';
+            CC.App.render();
+            var f = UI.qs('#aCode'); if (f) f.focus();
+          }).catch(function (e) {
+            // Already registered is a signpost, not a dead end.
+            if (e.error === 'already_registered') {
+              authReset('login');
+              auth.phone = phone;
+              auth.err = e.message;
+              CC.App.render();
+              return;
+            }
+            fail(e);
+          });
+        });
+      }
+
+      var goBtn = UI.qs('#aGo');
+      if (!goBtn) return;
+
+      goBtn.addEventListener('click', function () {
+        if (auth.busy) return;
+
+        if (auth.step === 'phone') {
+          if (auth.mode === 'login') {
+            var phone = (UI.qs('#aPhone').value || '').trim();
+            var pass = UI.qs('#aPass').value || '';
+            if (!UI.validPhone(phone)) { auth.err = 'That mobile number does not look right.'; CC.App.render(); return; }
+            if (!pass) { auth.err = 'Enter your password.'; CC.App.render(); return; }
+            auth.phone = phone;
+            go(function () {
+              CC.Api.login(phone, pass).then(function (d) {
+                if (stale()) return;
+                var m = S.adoptServerMember(d.member);
+                authReset('signup');
+                UI.toast('Welcome back, <b>' + UI.esc(m.name.split(' ')[0]) + '</b>');
+                CC.App.render();
+              }).catch(fail);
+            });
+            return;
+          }
+          sendCode(auth.mode === 'reset' ? 'reset' : 'signup');
+          return;
+        }
+
+        if (auth.step === 'code') {
+          var code = (UI.qs('#aCode').value || '').replace(/\D/g, '');
+          if (code.length < 4) { auth.err = 'Enter the code we sent you.'; CC.App.render(); return; }
+          go(function () {
+            CC.Api.verifyCode(auth.phone, code, auth.mode === 'reset' ? 'reset' : 'signup')
+              .then(function (d) {
+                if (stale()) return;
+                auth.busy = false; auth.ticket = d.ticket; auth.step = 'password'; auth.note = '';
+                CC.App.render();
+                var f = UI.qs('#aPass2'); if (f) f.focus();
+              }).catch(function (e) {
+                if (typeof e.attempts_left === 'number' && e.attempts_left > 0) {
+                  e.message += ' ' + e.attempts_left + ' ' +
+                    (e.attempts_left === 1 ? 'try' : 'tries') + ' left.';
+                }
+                fail(e);
+              });
+          });
+          return;
+        }
+
+        if (auth.step === 'password') {
+          var pw = UI.qs('#aPass2').value || '';
+          if (pw.length < 8) { auth.err = 'Use at least 8 characters.'; CC.App.render(); return; }
+          go(function () {
+            var call = auth.mode === 'reset'
+              ? CC.Api.resetPassword(auth.phone, auth.ticket, pw)
+              : CC.Api.createAccount(auth.phone, auth.ticket, auth.name, pw);
+            call.then(function (d) {
+              if (stale()) return;
+              var m = S.adoptServerMember(d.member);
+              var wasReset = auth.mode === 'reset';
+              authReset('signup');
+              UI.toast(wasReset
+                ? 'Password updated'
+                : 'Card created · <b>' + m.code + '</b>');
+              CC.App.render();
+            }).catch(fail);
+          });
+        }
+      });
+
+      var resend = UI.qs('#aResend');
+      if (resend) resend.addEventListener('click', function () {
+        if (auth.busy) return;
+        go(function () {
+          CC.Api.requestCode(auth.phone, auth.mode === 'reset' ? 'reset' : 'signup')
+            .then(function (d) {
+              if (stale()) return;
+              auth.busy = false;
+              auth.note = d.dry_run ? 'Test mode: the code is in the server log.' : 'A new code is on its way.';
+              CC.App.render();
+            }).catch(fail);
+        });
+      });
+
+      // Enter submits from any field in the flow
+      UI.qsa('.card input').forEach(function (f) {
+        f.addEventListener('keydown', function (e) { if (e.key === 'Enter') goBtn.click(); });
+      });
+      if (errEl && auth.err) errEl.setAttribute('role', 'alert');
     }
 
     return { html: html, tone: 'dark', mount: mount };

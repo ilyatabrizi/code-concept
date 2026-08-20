@@ -1,18 +1,19 @@
 /* sw.js — offline shell for the Code Concept PWA.
    Cache-first for the app's own assets, network-first for navigations. */
-const VERSION = 'cc-cb1b9be9';
+const VERSION = 'cc-1140e1a2';
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './assets/css/app.css?v=cb1b9be9',
-  './assets/js/qr.js?v=cb1b9be9',
-  './assets/js/data.js?v=cb1b9be9',
-  './assets/js/store.js?v=cb1b9be9',
-  './assets/js/ui.js?v=cb1b9be9',
-  './assets/js/views.js?v=cb1b9be9',
-  './assets/js/crm.js?v=cb1b9be9',
-  './assets/js/app.js?v=cb1b9be9',
+  './assets/css/app.css?v=1140e1a2',
+  './assets/js/api.js?v=1140e1a2',
+  './assets/js/qr.js?v=1140e1a2',
+  './assets/js/data.js?v=1140e1a2',
+  './assets/js/store.js?v=1140e1a2',
+  './assets/js/ui.js?v=1140e1a2',
+  './assets/js/views.js?v=1140e1a2',
+  './assets/js/crm.js?v=1140e1a2',
+  './assets/js/app.js?v=1140e1a2',
   './assets/fonts/saira-latin.woff2',
   './assets/fonts/michroma-latin.woff2',
   './assets/img/logo-white.png',
@@ -53,6 +54,11 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  /* Never cache the API. account/me is a plain same-origin GET, so without this
+     a stale "you are signed in" answer could be served from the cache long after
+     the session was revoked. Auth answers must always come from the server. */
+  if (url.pathname.includes('/api/')) return;
 
   // Navigations: always revalidate the shell against the server, so a redeploy
   // is picked up on the next visit. `cache: 'no-cache'` still allows a cheap 304

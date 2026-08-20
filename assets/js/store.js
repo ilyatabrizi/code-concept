@@ -62,7 +62,11 @@
       return this.members().filter(function (m) { return m.id === id; })[0] || null;
     },
     signIn: function (id) { write(K.session, id); emit(); },
-    signOut: function () { write(K.session, null); emit(); },
+    signOut: function () {
+      write(K.session, null);
+      if (CC.Api) CC.Api.setToken('');       // drop the server session too
+      emit();
+    },
 
     isStaff: function () { return read(K.staff, false) === true; },
     setStaff: function (v) { write(K.staff, !!v); emit(); },
@@ -89,6 +93,47 @@
       var c = String(code).trim().toUpperCase();
       return this.members().filter(function (m) { return m.code === c; })[0] || null;
     },
+    /**
+     * Bind a member the server just authenticated to this device.
+     * Identity (name, phone, member code) comes from the server; points and
+     * order history stay local until the loyalty rules are settled, so an
+     * existing local record is matched on the member code and kept.
+     */
+    adoptServerMember: function (server) {
+      var members = this.members();
+      var digits = function (v) { return String(v || '').replace(/\D/g, ''); };
+      /* Match on the server's own id first. Falling back to the member code
+         alone would bind the wrong local record if a code were ever reissued;
+         the phone is the last resort for records created before serverId
+         existed. */
+      var local = members.filter(function (m) { return m.serverId && m.serverId === server.id; })[0]
+               || members.filter(function (m) { return !m.serverId && m.code === server.code; })[0]
+               || members.filter(function (m) { return !m.serverId && digits(m.phone) === digits(server.phone); })[0];
+      if (local) {
+        local.name = server.name;
+        local.phone = server.phone;
+        local.code = server.code;          // the server is the authority
+        local.serverId = server.id;
+        local.verified = true;
+      } else {
+        local = {
+          id: 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
+          serverId: server.id,
+          code: server.code,
+          name: server.name,
+          phone: server.phone,
+          joined: server.joined || Date.now(),
+          verified: true,
+          points: 0, lifetime: 0, spend: 0, visits: 0,
+          redeemed: [], favourite: null, note: ''
+        };
+        members.push(local);
+      }
+      write(K.members, members);
+      this.signIn(local.id);
+      return local;
+    },
+
     join: function (name, phone) {
       var existing = this.findByPhone(phone);
       if (existing) { this.signIn(existing.id); return existing; }

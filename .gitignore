@@ -1,2 +1,7 @@
 .DS_Store
 *.log
+# never commit live secrets or local test artefacts
+cc-config.php
+*.sqlite
+*.db
+cc-sms.log

@@ -17,6 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parent
 ASSETS = [
     "assets/css/app.css",
     "assets/js/qr.js",
+    "assets/js/api.js",
     "assets/js/data.js",
     "assets/js/store.js",
     "assets/js/ui.js",

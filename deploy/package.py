@@ -28,9 +28,13 @@ DOMAIN = 'https://codeconceptcafe.com'
 OUT = pathlib.Path.home() / 'Downloads' / 'codeconceptcafe.zip'
 
 SHIP_FILES = ['index.html', '404.html', 'manifest.webmanifest', 'sw.js']
-SHIP_DIRS = ['assets', 'icons']
+SHIP_DIRS = ['assets', 'icons', 'api']
 # never let these reach a public server
 FORBIDDEN = ['ali_karimiazar']
+
+# the live config lives ABOVE the web root and is filled in on the server.
+# If any of this ever appears inside the package, stop.
+NEVER_IN_PACKAGE = ['cc-config.php', 'cc-sms.log', 'test.db']
 
 
 def build(stage: pathlib.Path) -> str:
@@ -89,6 +93,33 @@ def build(stage: pathlib.Path) -> str:
     for bad in FORBIDDEN:
         assert bad not in blob, f'{bad!r} must not ship'
     assert re.search(r"PASS_HASH\s*=\s*'[0-9a-f]{16}'", blob), 'staff passcode should ship only as a hash'
+
+    # ---- the API ------------------------------------------------------------
+    api = stage / 'api'
+    assert (api / 'index.php').exists(), 'api/index.php missing'
+    assert (api / '.htaccess').exists(), 'api/.htaccess missing — routes would 404'
+    assert (api / 'lib' / '.htaccess').exists(), 'api/lib/.htaccess missing — library would be readable'
+    for name in NEVER_IN_PACKAGE:
+        hits = list(stage.rglob(name))
+        assert not hits, f'{name} must never be inside the package: {hits}'
+
+    php = ''
+    for f in sorted(api.rglob('*.php')):
+        php += f.read_text(errors='ignore')
+    # A real key or password inside api/ means someone edited the wrong file.
+    # Matched by pattern, not by literal spacing — the earlier literal markers
+    # silently never matched, so this check was doing nothing at all.
+    leaks = [
+        (r"'api_key'\s*=>\s*'(?!')", 'an api_key value'),
+        (r"'pass'\s*=>\s*'(?!')", 'a database password'),
+        (r"'code_pepper'\s*=>", 'the code pepper'),
+        (r'PUT-THE-', 'a config placeholder'),
+        (r'x-api-key:\s*[A-Za-z0-9]{16}', 'a hard-coded api key'),
+    ]
+    for pattern, what in leaks:
+        assert not re.search(pattern, php), f'{what} must not be inside api/'
+    assert "cc-config.php" in php, 'api must read its secrets from the external config'
+    assert 'password_hash(' in php and 'hash_hmac(' in php, 'auth primitives missing'
 
     return m.group(1)
 

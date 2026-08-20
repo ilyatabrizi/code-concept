@@ -193,6 +193,25 @@
     else location.hash = hash;
   }
 
+  /**
+   * A server session can be ended elsewhere — a password reset signs every other
+   * device out. Check quietly on boot and drop the local sign-in if the server
+   * says no. A network failure is NOT a rejection: the app works offline and
+   * must not log someone out just because they are on a bad connection.
+   */
+  function revalidateSession() {
+    if (!CC.Api || !CC.Api.signedIn() || !S.me()) return;
+    CC.Api.me().then(function (d) {
+      if (d && d.member) S.adoptServerMember(d.member);
+    }).catch(function (e) {
+      if (e && (e.error === 'not_signed_in' || e.status === 401)) {
+        S.signOut();
+        UI.toast('Signed out — please sign in again');
+        render();
+      }
+    });
+  }
+
   // ---- install prompt ------------------------------------------------------
   var deferredPrompt = null;
   function showInstall() {
@@ -240,6 +259,14 @@
       if (add) { e.preventDefault(); addToBag(add.dataset.add); return; }
     });
 
+    /* localStorage is shared across tabs but nothing tells this one when another
+       changes it. Without this, signing out in one tab leaves the next still
+       showing a member card. */
+    window.addEventListener('storage', function (e) {
+      if (!e.key || e.key.indexOf('cc.v2.') !== 0) return;
+      render();
+    });
+
     window.addEventListener('hashchange', render);
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', function () {
@@ -250,6 +277,7 @@
 
     syncTopbarHeight();
     render();
+    revalidateSession();
     // fonts can shift tab and top-bar metrics — settle both once they land
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function () {
